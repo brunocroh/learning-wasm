@@ -1,0 +1,18 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Modulo</title>
+    <script type="module">
+      import init, { texto } from "./pkg/modulo.js";
+
+      async function execute() {
+        await init();
+
+        document.body.textContent = texto();
+      }
+      execute();
+    </script>
+  </head>
+  <body></body>
+</html>
