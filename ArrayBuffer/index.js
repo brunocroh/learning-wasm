@@ -1,15 +1,15 @@
-const bufferMemoria = new ArrayBuffer(256);
+const bufferMemory = new ArrayBuffer(256);
 
-const visualizacaoInteira = new Uint8Array(bufferMemoria);
-const visPrimeiraMetade = new Uint8Array(bufferMemoria, 0, 128);
-const visTerceiroQuarto = new Uint8Array(bufferMemoria, 128, 64);
-const visResto = new Uint8Array(bufferMemoria, 192);
+const viewAll = new Uint8Array(bufferMemory);
+const viewFirstHalf = new Uint8Array(bufferMemory, 0, 128);
+const viewThirdQuarter = new Uint8Array(bufferMemory, 128, 64);
+const viewRest = new Uint8Array(bufferMemory, 192);
 
-const memoria = new ArrayBuffer(9);
-const viewIdade = new Uint8Array(memoria, 0, 1);
-const viewNome = new Uint8Array(memoria, 1);
+const memory = new ArrayBuffer(9);
+const viewAge = new Uint8Array(memory, 0, 1);
+const viewName = new Uint8Array(memory, 1);
 
-const idade = viewIdade[0];
+const age = viewAge[0];
 
 const f64 = new Float64Array(64);
 const f32 = new Float32Array(64);
@@ -26,10 +26,10 @@ const i8 = new Int8Array(64);
 const myArrayBuffer = new ArrayBuffer(256);
 const dataView = new DataView(myArrayBuffer);
 
-const cabecalho = dataView.getUint8(0);
-const comprimento = dataView.getUint16(1);
-const matrizTipada = new Float32Array(comprimento * cabecalho);
+const header = dataView.getUint8(0);
+const width = dataView.getUint16(1);
+const typedArray = new Float32Array(width * header);
 
-for (let i = 0, endreco = 3; i < matrizTipada.length; i++, endereco += 4) {
-  matrizTipada[i] = dataView.getFloat(endereco);
+for (let i = 0, address = 3; i < TypedArray.length; i++, address += 4) {
+  typedArray[i] = dataView.getFloat(address);
 }
