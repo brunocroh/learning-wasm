@@ -3,6 +3,23 @@ use std::mem;
 use std::slice::from_raw_parts_mut;
 
 #[unsafe(no_mangle)]
+extern "C" fn filtro_preto_e_branco(ponteiro: *mut u8, comprimento: usize) {
+    let pixels = unsafe { from_raw_parts_mut(ponteiro as *mut u8, comprimento) };
+    let mut i = 0;
+    loop {
+        if i >= comprimento - 1 {
+            break;
+        }
+
+        let filtro = (pixels[i] / 3) + (pixels[i + 1] / 3) + (pixels[i + 2] / 3);
+        pixels[i] = filtro;
+        pixels[i + 1] = filtro;
+        pixels[i + 2] = filtro;
+        i += 4;
+    }
+}
+
+#[unsafe(no_mangle)]
 extern "C" fn malloc(comprimento: usize) -> *mut u8 {
     let alinhamento = mem::align_of::<usize>();
     if let Ok(layout) = Layout::from_size_align(comprimento, alinhamento) {
