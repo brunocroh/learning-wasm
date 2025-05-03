@@ -1,5 +1,39 @@
 const arquivo = "./target/wasm32-unknown-unknown/release/image_editor.wasm";
 
+const converteImagemParaCanvas = (imagem) => {
+  const canvas = document.createElement("canvas");
+
+  const contexto = canvas.getContext("2d");
+
+  canvas.width = imagem.naturalWidth || imagem.width;
+  canvas.height = imagem.naturalHeight || imagem.height;
+
+  contexto.drawImage(imagem, 0, 0);
+  return { canvas, contexto };
+};
+
+const filtroPretoBrancoJS = (canvas, contexto) => {
+  const dadosDaImagem = contexto.getImageData(
+    0,
+    0,
+    canvas.width,
+    canvas.height,
+  );
+
+  const pixels = dadosDaImagem.data;
+
+  for (var i = 0, n = pixels.length; i < n; i += 4) {
+    const filtro = pixels[i] / 3 + pixels[i + 1] / 3 + pixels[i + 2] / 3;
+    pixels[i] = filtro;
+    pixels[i + 1] = filtro;
+    pixels[i + 2] = filtro;
+  }
+
+  contexto.putImageData(dadosDaImagem, 0, 0);
+
+  return canvas.toDataURL("image/jpeg");
+};
+
 WebAssembly.instantiateStreaming(fetch(arquivo)).then((wasm) => {
   const { instance } = wasm;
   const { subtracao, criar_memoria_inicial, memory, malloc, acumular } =
@@ -26,4 +60,39 @@ WebAssembly.instantiateStreaming(fetch(arquivo)).then((wasm) => {
   const somaEntreItensDaLista = acumular(wasmListaPonteiro, comprimento);
 
   console.log({ somaEntreItensDaLista });
+});
+
+const input = document.querySelector("input");
+const botaoResetarFiltro = document.querySelector("#remover");
+const botaoPBFiltroJs = document.querySelector("#preto-e-branco-js");
+const botaoPBFiltroWasm = document.querySelector("#preto-e-branco-wasm");
+
+let imagemOriginal = document.getElementById("imagem").src;
+
+input.addEventListener("change", (event) => {
+  const imageFile = event.target.files[0];
+  const reader = new FileReader();
+
+  const imagem = document.getElementById("imagem");
+  imagem.title = arquivo.name;
+
+  reader.onload = (event) => {
+    imagem.src = event.target.result;
+    imagemOriginal = imagem.src;
+  };
+
+  reader.readAsDataURL(imageFile);
+});
+
+botaoResetarFiltro.addEventListener("click", (event) => {
+  const imagem = document.getElementById("imagem");
+  imagem.src = imagemOriginal;
+  console.log("Image restored");
+});
+
+botaoPBFiltroJs.addEventListener("click", (event) => {
+  const imagem = document.getElementById("imagem");
+  const { canvas, contexto } = converteImagemParaCanvas(imagem);
+  const base64 = filtroPretoBrancoJS(canvas, contexto);
+  imagem.src = base64;
 });
