@@ -10,20 +10,28 @@ const renderPerformance = (start, end, str) => {
   performance.textContent = `${str}: ${end - start} ms.`;
 };
 
-const imageToCanvas = (image) => {
+const imageToCanvas = () => {
+  const image = document.getElementById("imagem");
   const canvas = document.createElement("canvas");
   const context = canvas.getContext("2d");
 
-  canvas.width = image.naturalWidth || image.width;
-  canvas.height = image.naturalHeight || image.height;
+  const width = image.naturalWidth || image.width;
+  const height = image.naturalHeight || image.height;
+
+  canvas.width = width;
+  canvas.height = height;
 
   context.drawImage(image, 0, 0);
-  return { canvas, context };
+  return { canvas, context, width, height };
+};
+
+const renderImage = (base64) => {
+  const image = document.getElementById("imagem");
+  image.src = base64;
 };
 
 const BWFilterJS = (canvas, context) => {
   const image = context.getImageData(0, 0, canvas.width, canvas.height);
-
   const pixels = image.data;
 
   const start = performance.now();
@@ -34,11 +42,44 @@ const BWFilterJS = (canvas, context) => {
     pixels[i + 1] = filter;
     pixels[i + 2] = filter;
   }
+
   const end = performance.now();
 
   renderPerformance(start, end, "Javascript B/W filter");
 
   context.putImageData(image, 0, 0);
+  return canvas.toDataURL("image/jpeg");
+};
+
+const BWFilterWasm = (canvas, context) => {
+  const dadosDaImagem = context.getImageData(0, 0, canvas.width, canvas.height);
+
+  const buffer = dadosDaImagem.data.buffer;
+  const u8Array = new Uint8Array(buffer);
+  const ponteiro = malloc(u8Array.length);
+
+  const wasmArray = new Uint8ClampedArray(
+    instance.exports.memory.buffer,
+    ponteiro,
+    u8Array.length,
+  );
+
+  wasmArray.set(u8Array);
+
+  const start = performance.now();
+  black_white_filter(ponteiro, u8Array.length);
+  const end = performance.now();
+
+  renderPerformance(start, end, "WebAssembly B/W filter");
+
+  const width = image.naturalWidth || image.width;
+  const height = image.naturalHeight || image.height;
+
+  const newImage = context.createImageData(width, height);
+
+  newImage.data.set(wasmArray);
+
+  context.putImageData(newImage, 0, 0);
   return canvas.toDataURL("image/jpeg");
 };
 
@@ -48,9 +89,23 @@ WebAssembly.instantiateStreaming(fetch(wasmFile)).then((wasm) => {
 
   init_memory();
 
+  input.addEventListener("change", (event) => {
+    const imageFile = event.target.files[0];
+    const reader = new FileReader();
+
+    const imagem = document.getElementById("imagem");
+    imagem.title = imageFile.name;
+
+    reader.onload = (event) => {
+      imagem.src = event.target.result;
+      originalImage = imagem.src;
+    };
+
+    reader.readAsDataURL(imageFile);
+  });
+
   btnFilterWasm.addEventListener("click", (event) => {
-    const image = document.getElementById("imagem");
-    const { canvas, context } = imageToCanvas(image);
+    const { canvas, context, width, height } = imageToCanvas();
 
     const dadosDaImagem = context.getImageData(
       0,
@@ -72,35 +127,19 @@ WebAssembly.instantiateStreaming(fetch(wasmFile)).then((wasm) => {
     wasmArray.set(u8Array);
 
     const start = performance.now();
+
     black_white_filter(ponteiro, u8Array.length);
+
     const end = performance.now();
 
     renderPerformance(start, end, "WebAssembly B/W filter");
-
-    const width = image.naturalWidth || image.width;
-    const height = image.naturalHeight || image.height;
 
     const newImage = context.createImageData(width, height);
 
     newImage.data.set(wasmArray);
 
     context.putImageData(newImage, 0, 0);
-    image.src = canvas.toDataURL("image/jpeg");
-  });
-
-  input.addEventListener("change", (event) => {
-    const imageFile = event.target.files[0];
-    const reader = new FileReader();
-
-    const imagem = document.getElementById("imagem");
-    imagem.title = imageFile.name;
-
-    reader.onload = (event) => {
-      imagem.src = event.target.result;
-      originalImage = imagem.src;
-    };
-
-    reader.readAsDataURL(imageFile);
+    renderImage(canvas.toDataURL("image/jpeg"));
   });
 
   btnResetFilter.addEventListener("click", (event) => {
@@ -110,9 +149,7 @@ WebAssembly.instantiateStreaming(fetch(wasmFile)).then((wasm) => {
   });
 
   btnFilterJS.addEventListener("click", (event) => {
-    const image = document.getElementById("imagem");
-    const { canvas, context } = imageToCanvas(image);
-    const base64 = BWFilterJS(canvas, context);
-    image.src = base64;
+    const { canvas, context } = imageToCanvas();
+    renderImage(BWFilterJS(canvas, context));
   });
 });
