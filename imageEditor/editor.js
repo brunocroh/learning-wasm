@@ -44,36 +44,9 @@ const BWFilterJS = (canvas, context) => {
 
 WebAssembly.instantiateStreaming(fetch(wasmFile)).then((wasm) => {
   const { instance } = wasm;
-  const {
-    subtract,
-    init_memory,
-    memory,
-    malloc,
-    aggregate,
-    black_white_filter,
-  } = instance.exports;
+  const { init_memory, memory, malloc, black_white_filter } = instance.exports;
 
   init_memory();
-  const arrayMemoria = new Uint8Array(memory.buffer, 0).slice(0, 10);
-
-  console.log(arrayMemoria);
-  console.log(subtract(28, 10));
-
-  const jsLista = Uint8Array.from([20, 50, 80]);
-  const comprimento = jsLista.length;
-  const wasmListaPonteiro = malloc(comprimento);
-
-  const wasmLista = new Uint8Array(
-    memory.buffer,
-    wasmListaPonteiro,
-    comprimento,
-  );
-
-  wasmLista.set(jsLista);
-
-  const aggregateResult = aggregate(wasmListaPonteiro, comprimento);
-
-  console.log({ aggregateResult });
 
   btnFilterWasm.addEventListener("click", (event) => {
     const image = document.getElementById("imagem");

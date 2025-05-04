@@ -38,26 +38,10 @@ extern "C" fn malloc(length: usize) -> *mut u8 {
 }
 
 #[unsafe(no_mangle)]
-extern "C" fn aggregate(pointer: *mut u8, length: usize) -> i32 {
-    let slice = unsafe { from_raw_parts_mut(pointer as *mut u8, length) };
-    let mut sum = 0;
-    for i in 0..length {
-        sum = sum + slice[i]
-    }
-
-    sum as i32
-}
-
-#[unsafe(no_mangle)]
 extern "C" fn init_memory() {
     let fatia: &mut [u8];
 
     unsafe { fatia = from_raw_parts_mut::<u8>(5 as *mut u8, 10) }
 
     fatia[0] = 85
-}
-
-#[unsafe(no_mangle)]
-pub extern "C" fn subtract(number_a: u8, number_b: u8) -> u8 {
-    number_a - number_b
 }
