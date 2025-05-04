@@ -103,6 +103,7 @@ WebAssembly.instantiateStreaming(fetch(wasmFile)).then((wasm) => {
     green_filter,
     blue_filter,
     opacity_filter,
+    invert_colors_filter,
   } = instance.exports;
 
   addFilter("B/W Filter Wasm", "#preto-e-branco-wasm", {
@@ -113,6 +114,11 @@ WebAssembly.instantiateStreaming(fetch(wasmFile)).then((wasm) => {
   addFilter("Opacity Filter", "#opacity-filter-wasm", {
     instance,
     filter: opacity_filter,
+  });
+
+  addFilter("Invert colors Wasm", "#invert-colors-wasm", {
+    instance,
+    filter: invert_colors_filter,
   });
 
   addFilter("Red Filter Wasm", "#red-filter-wasm", {

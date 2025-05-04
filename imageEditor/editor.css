@@ -25,4 +25,6 @@ body {
   background: #c12664;
   float: right;
   width: 25%;
+  height: 450px;
+  overflow-y: scroll;
 }

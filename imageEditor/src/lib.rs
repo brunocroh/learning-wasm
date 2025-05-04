@@ -86,6 +86,16 @@ extern "C" fn opacity_filter(data: *mut u8, length: usize) {
 }
 
 #[unsafe(no_mangle)]
+extern "C" fn invert_colors_filter(data: *mut u8, length: usize) {
+    let pixels = unsafe { from_raw_parts_mut(data as *mut u8, length) };
+    for i in (0..length - 1).step_by(4) {
+        pixels[i] = 255 - pixels[i];
+        pixels[i + 1] = 255 - pixels[i + 1];
+        pixels[i + 2] = 255 - pixels[i + 2];
+    }
+}
+
+#[unsafe(no_mangle)]
 extern "C" fn malloc(length: usize) -> *mut u8 {
     let align = mem::align_of::<usize>();
     if let Ok(layout) = Layout::from_size_align(length, align) {
