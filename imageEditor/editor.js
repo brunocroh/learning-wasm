@@ -1,64 +1,63 @@
-const arquivo = "./target/wasm32-unknown-unknown/release/image_editor.wasm";
+const wasmFile = "./target/wasm32-unknown-unknown/release/image_editor.wasm";
+const input = document.querySelector("input");
+const btnResetFilter = document.querySelector("#remover");
+const btnFilterJS = document.querySelector("#preto-e-branco-js");
+const btnFilterWasm = document.querySelector("#preto-e-branco-wasm");
+let originalImage = document.getElementById("imagem").src;
 
-const tempoDaOperacao = (inicio, fim, nomeDaOperacao) => {
+const renderPerformance = (start, end, str) => {
   const performance = document.querySelector("#performance");
-
-  performance.textContent = `${nomeDaOperacao}: ${fim - inicio} ms.`;
+  performance.textContent = `${str}: ${end - start} ms.`;
 };
 
-const converteImagemParaCanvas = (imagem) => {
+const imageToCanvas = (image) => {
   const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
 
-  const contexto = canvas.getContext("2d");
+  canvas.width = image.naturalWidth || image.width;
+  canvas.height = image.naturalHeight || image.height;
 
-  canvas.width = imagem.naturalWidth || imagem.width;
-  canvas.height = imagem.naturalHeight || imagem.height;
-
-  contexto.drawImage(imagem, 0, 0);
-  return { canvas, contexto };
+  context.drawImage(image, 0, 0);
+  return { canvas, context };
 };
 
-const filtroPretoBrancoJS = (canvas, contexto) => {
-  const dadosDaImagem = contexto.getImageData(
-    0,
-    0,
-    canvas.width,
-    canvas.height,
-  );
+const BWFilterJS = (canvas, context) => {
+  const image = context.getImageData(0, 0, canvas.width, canvas.height);
 
-  const pixels = dadosDaImagem.data;
+  const pixels = image.data;
 
-  const inicio = performance.now();
+  const start = performance.now();
+
   for (var i = 0, n = pixels.length; i < n; i += 4) {
-    const filtro = pixels[i] / 3 + pixels[i + 1] / 3 + pixels[i + 2] / 3;
-    pixels[i] = filtro;
-    pixels[i + 1] = filtro;
-    pixels[i + 2] = filtro;
+    const filter = pixels[i] / 3 + pixels[i + 1] / 3 + pixels[i + 2] / 3;
+    pixels[i] = filter;
+    pixels[i + 1] = filter;
+    pixels[i + 2] = filter;
   }
-  const fim = performance.now();
+  const end = performance.now();
 
-  tempoDaOperacao(inicio, fim, "Javascript Preto e Branco");
+  renderPerformance(start, end, "Javascript B/W filter");
 
-  contexto.putImageData(dadosDaImagem, 0, 0);
+  context.putImageData(image, 0, 0);
   return canvas.toDataURL("image/jpeg");
 };
 
-WebAssembly.instantiateStreaming(fetch(arquivo)).then((wasm) => {
+WebAssembly.instantiateStreaming(fetch(wasmFile)).then((wasm) => {
   const { instance } = wasm;
   const {
-    subtracao,
-    criar_memoria_inicial,
+    subtract,
+    init_memory,
     memory,
     malloc,
-    acumular,
-    filtro_preto_e_branco,
+    aggregate,
+    black_white_filter,
   } = instance.exports;
 
-  criar_memoria_inicial();
+  init_memory();
   const arrayMemoria = new Uint8Array(memory.buffer, 0).slice(0, 10);
 
   console.log(arrayMemoria);
-  console.log(subtracao(28, 10));
+  console.log(subtract(28, 10));
 
   const jsLista = Uint8Array.from([20, 50, 80]);
   const comprimento = jsLista.length;
@@ -72,15 +71,15 @@ WebAssembly.instantiateStreaming(fetch(arquivo)).then((wasm) => {
 
   wasmLista.set(jsLista);
 
-  const somaEntreItensDaLista = acumular(wasmListaPonteiro, comprimento);
+  const aggregateResult = aggregate(wasmListaPonteiro, comprimento);
 
-  console.log({ somaEntreItensDaLista });
+  console.log({ aggregateResult });
 
-  botaoPBFiltroWasm.addEventListener("click", (event) => {
-    const imagem = document.getElementById("imagem");
-    const { canvas, contexto } = converteImagemParaCanvas(imagem);
+  btnFilterWasm.addEventListener("click", (event) => {
+    const image = document.getElementById("imagem");
+    const { canvas, context } = imageToCanvas(image);
 
-    const dadosDaImagem = contexto.getImageData(
+    const dadosDaImagem = context.getImageData(
       0,
       0,
       canvas.width,
@@ -99,57 +98,48 @@ WebAssembly.instantiateStreaming(fetch(arquivo)).then((wasm) => {
 
     wasmArray.set(u8Array);
 
-    const inicio = performance.now();
+    const start = performance.now();
+    black_white_filter(ponteiro, u8Array.length);
+    const end = performance.now();
 
-    filtro_preto_e_branco(ponteiro, u8Array.length);
+    renderPerformance(start, end, "WebAssembly B/W filter");
 
-    const final = performance.now();
+    const width = image.naturalWidth || image.width;
+    const height = image.naturalHeight || image.height;
 
-    tempoDaOperacao(inicio, final, "WebAssembly Preto e Branco");
+    const newImage = context.createImageData(width, height);
 
-    const width = imagem.naturalWidth || imagem.width;
-    const height = imagem.naturalHeight || imagem.height;
+    newImage.data.set(wasmArray);
 
-    const novosDadosDaImagem = contexto.createImageData(width, height);
-
-    novosDadosDaImagem.data.set(wasmArray);
-
-    contexto.putImageData(novosDadosDaImagem, 0, 0);
-    imagem.src = canvas.toDataURL("image/jpeg");
+    context.putImageData(newImage, 0, 0);
+    image.src = canvas.toDataURL("image/jpeg");
   });
-});
 
-const input = document.querySelector("input");
-const botaoResetarFiltro = document.querySelector("#remover");
-const botaoPBFiltroJs = document.querySelector("#preto-e-branco-js");
-const botaoPBFiltroWasm = document.querySelector("#preto-e-branco-wasm");
+  input.addEventListener("change", (event) => {
+    const imageFile = event.target.files[0];
+    const reader = new FileReader();
 
-let imagemOriginal = document.getElementById("imagem").src;
+    const imagem = document.getElementById("imagem");
+    imagem.title = imageFile.name;
 
-input.addEventListener("change", (event) => {
-  const imageFile = event.target.files[0];
-  const reader = new FileReader();
+    reader.onload = (event) => {
+      imagem.src = event.target.result;
+      originalImage = imagem.src;
+    };
 
-  const imagem = document.getElementById("imagem");
-  imagem.title = arquivo.name;
+    reader.readAsDataURL(imageFile);
+  });
 
-  reader.onload = (event) => {
-    imagem.src = event.target.result;
-    imagemOriginal = imagem.src;
-  };
+  btnResetFilter.addEventListener("click", (event) => {
+    const imagem = document.getElementById("imagem");
+    imagem.src = originalImage;
+    console.log("Image restored");
+  });
 
-  reader.readAsDataURL(imageFile);
-});
-
-botaoResetarFiltro.addEventListener("click", (event) => {
-  const imagem = document.getElementById("imagem");
-  imagem.src = imagemOriginal;
-  console.log("Image restored");
-});
-
-botaoPBFiltroJs.addEventListener("click", (event) => {
-  const imagem = document.getElementById("imagem");
-  const { canvas, contexto } = converteImagemParaCanvas(imagem);
-  const base64 = filtroPretoBrancoJS(canvas, contexto);
-  imagem.src = base64;
+  btnFilterJS.addEventListener("click", (event) => {
+    const image = document.getElementById("imagem");
+    const { canvas, context } = imageToCanvas(image);
+    const base64 = BWFilterJS(canvas, context);
+    image.src = base64;
+  });
 });

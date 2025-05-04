@@ -3,34 +3,34 @@ use std::mem;
 use std::slice::from_raw_parts_mut;
 
 #[unsafe(no_mangle)]
-extern "C" fn filtro_preto_e_branco(ponteiro: *mut u8, comprimento: usize) {
-    let pixels = unsafe { from_raw_parts_mut(ponteiro as *mut u8, comprimento) };
+extern "C" fn black_white_filter(pointer: *mut u8, length: usize) {
+    let pixels = unsafe { from_raw_parts_mut(pointer as *mut u8, length) };
     let mut i = 0;
     loop {
-        if i >= comprimento - 1 {
+        if i >= length - 1 {
             break;
         }
 
-        let filtro = (pixels[i] / 3) + (pixels[i + 1] / 3) + (pixels[i + 2] / 3);
-        pixels[i] = filtro;
-        pixels[i + 1] = filtro;
-        pixels[i + 2] = filtro;
+        let filter = (pixels[i] / 3) + (pixels[i + 1] / 3) + (pixels[i + 2] / 3);
+        pixels[i] = filter;
+        pixels[i + 1] = filter;
+        pixels[i + 2] = filter;
         i += 4;
     }
 }
 
 #[unsafe(no_mangle)]
-extern "C" fn malloc(comprimento: usize) -> *mut u8 {
-    let alinhamento = mem::align_of::<usize>();
-    if let Ok(layout) = Layout::from_size_align(comprimento, alinhamento) {
+extern "C" fn malloc(length: usize) -> *mut u8 {
+    let align = mem::align_of::<usize>();
+    if let Ok(layout) = Layout::from_size_align(length, align) {
         unsafe {
             if layout.size() > 0 {
-                let ponteiro = alloc(layout);
-                if !ponteiro.is_null() {
-                    return ponteiro;
+                let pointer = alloc(layout);
+                if !pointer.is_null() {
+                    return pointer;
                 }
             } else {
-                return alinhamento as *mut u8;
+                return align as *mut u8;
             }
         }
     }
@@ -38,18 +38,18 @@ extern "C" fn malloc(comprimento: usize) -> *mut u8 {
 }
 
 #[unsafe(no_mangle)]
-extern "C" fn acumular(ponteiro: *mut u8, comprimento: usize) -> i32 {
-    let fatia = unsafe { from_raw_parts_mut(ponteiro as *mut u8, comprimento) };
-    let mut soma = 0;
-    for i in 0..comprimento {
-        soma = soma + fatia[i]
+extern "C" fn aggregate(pointer: *mut u8, length: usize) -> i32 {
+    let slice = unsafe { from_raw_parts_mut(pointer as *mut u8, length) };
+    let mut sum = 0;
+    for i in 0..length {
+        sum = sum + slice[i]
     }
 
-    soma as i32
+    sum as i32
 }
 
 #[unsafe(no_mangle)]
-extern "C" fn criar_memoria_inicial() {
+extern "C" fn init_memory() {
     let fatia: &mut [u8];
 
     unsafe { fatia = from_raw_parts_mut::<u8>(5 as *mut u8, 10) }
@@ -58,6 +58,6 @@ extern "C" fn criar_memoria_inicial() {
 }
 
 #[unsafe(no_mangle)]
-pub extern "C" fn subtracao(numero_a: u8, numero_b: u8) -> u8 {
-    numero_a - numero_b
+pub extern "C" fn subtract(number_a: u8, number_b: u8) -> u8 {
+    number_a - number_b
 }
