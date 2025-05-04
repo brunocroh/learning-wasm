@@ -2,7 +2,6 @@ const wasmFile = "./target/wasm32-unknown-unknown/release/image_editor.wasm";
 const input = document.querySelector("input");
 const btnResetFilter = document.querySelector("#remover");
 const btnFilterJS = document.querySelector("#preto-e-branco-js");
-const btnFilterWasm = document.querySelector("#preto-e-branco-wasm");
 let originalImage = document.getElementById("imagem").src;
 
 const renderPerformance = (start, end, str) => {
@@ -51,41 +50,79 @@ const BWFilterJS = (canvas, context) => {
   return canvas.toDataURL("image/jpeg");
 };
 
-const BWFilterWasm = (canvas, context) => {
-  const dadosDaImagem = context.getImageData(0, 0, canvas.width, canvas.height);
+const handleFilter = (image, processImageFn) => {
+  const { canvas } = imageToCanvas(image);
+  if (!processImageFn) {
+    return canvas.ToDataURL();
+  }
 
-  const buffer = dadosDaImagem.data.buffer;
-  const u8Array = new Uint8Array(buffer);
-  const ponteiro = malloc(u8Array.length);
+  if (typeof processImageFn === "function") {
+    processImageFn(canvas, canvas.getContext("2d"));
+    return canvas.toDataURL("image/jpeg");
+  }
+};
 
-  const wasmArray = new Uint8ClampedArray(
-    instance.exports.memory.buffer,
-    ponteiro,
-    u8Array.length,
-  );
+const addFilter = (text, selector, { instance, filter }) => {
+  const button = document.querySelector(selector);
+  const image = document.getElementById("imagem");
 
-  wasmArray.set(u8Array);
-
-  const start = performance.now();
-  black_white_filter(ponteiro, u8Array.length);
-  const end = performance.now();
-
-  renderPerformance(start, end, "WebAssembly B/W filter");
-
-  const width = image.naturalWidth || image.width;
-  const height = image.naturalHeight || image.height;
-
-  const newImage = context.createImageData(width, height);
-
-  newImage.data.set(wasmArray);
-
-  context.putImageData(newImage, 0, 0);
-  return canvas.toDataURL("image/jpeg");
+  button.addEventListener("click", () => {
+    handleFilter(image, (canvas, context) => {
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      const buffer = imageData.data.buffer;
+      const u8Array = new Uint8Array(buffer);
+      let wasmClampedPtr = instance.exports.malloc(u8Array.length);
+      let wasmClampedArray = new Uint8ClampedArray(
+        instance.exports.memory.buffer,
+        wasmClampedPtr,
+        u8Array.length,
+      );
+      wasmClampedArray.set(u8Array);
+      const start = performance.now();
+      filter(wasmClampedPtr, u8Array.length);
+      const end = performance.now();
+      renderPerformance(start, end, text);
+      const width = image.naturalWidth || image.width;
+      const height = image.naturalHeight || image.height;
+      const newImageData = context.createImageData(width, height);
+      newImageData.data.set(wasmClampedArray);
+      context.putImageData(newImageData, 0, 0);
+      image.src = canvas.toDataURL("image/jpeg");
+    });
+  });
 };
 
 WebAssembly.instantiateStreaming(fetch(wasmFile)).then((wasm) => {
   const { instance } = wasm;
-  const { init_memory, memory, malloc, black_white_filter } = instance.exports;
+  const {
+    init_memory,
+    memory,
+    malloc,
+    black_white_filter,
+    red_filter,
+    green_filter,
+    blue_filter,
+  } = instance.exports;
+
+  addFilter("B/W Filter Wasm", "#preto-e-branco-wasm", {
+    instance,
+    filter: black_white_filter,
+  });
+
+  addFilter("Red Filter Wasm", "#red-filter-wasm", {
+    instance,
+    filter: red_filter,
+  });
+
+  addFilter("Green Filter Wasm", "#green-filter-wasm", {
+    instance,
+    filter: green_filter,
+  });
+
+  addFilter("Blue Filter Wasm", "#blue-filter-wasm", {
+    instance,
+    filter: blue_filter,
+  });
 
   init_memory();
 
@@ -102,44 +139,6 @@ WebAssembly.instantiateStreaming(fetch(wasmFile)).then((wasm) => {
     };
 
     reader.readAsDataURL(imageFile);
-  });
-
-  btnFilterWasm.addEventListener("click", (event) => {
-    const { canvas, context, width, height } = imageToCanvas();
-
-    const dadosDaImagem = context.getImageData(
-      0,
-      0,
-      canvas.width,
-      canvas.height,
-    );
-
-    const buffer = dadosDaImagem.data.buffer;
-    const u8Array = new Uint8Array(buffer);
-    const ponteiro = malloc(u8Array.length);
-
-    const wasmArray = new Uint8ClampedArray(
-      instance.exports.memory.buffer,
-      ponteiro,
-      u8Array.length,
-    );
-
-    wasmArray.set(u8Array);
-
-    const start = performance.now();
-
-    black_white_filter(ponteiro, u8Array.length);
-
-    const end = performance.now();
-
-    renderPerformance(start, end, "WebAssembly B/W filter");
-
-    const newImage = context.createImageData(width, height);
-
-    newImage.data.set(wasmArray);
-
-    context.putImageData(newImage, 0, 0);
-    renderImage(canvas.toDataURL("image/jpeg"));
   });
 
   btnResetFilter.addEventListener("click", (event) => {

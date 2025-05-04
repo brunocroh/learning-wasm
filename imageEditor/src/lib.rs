@@ -3,6 +3,51 @@ use std::mem;
 use std::slice::from_raw_parts_mut;
 
 #[unsafe(no_mangle)]
+extern "C" fn red_filter(data: *mut u8, length: usize) {
+    let pixels = unsafe { from_raw_parts_mut(data as *mut u8, length) };
+    let mut i = 0;
+    loop {
+        if i >= length - 1 {
+            break;
+        }
+
+        pixels[i + 1] = pixels[i + 1] / 2;
+        pixels[i + 2] = pixels[i + 2] / 2;
+        i += 4;
+    }
+}
+
+#[unsafe(no_mangle)]
+extern "C" fn green_filter(data: *mut u8, length: usize) {
+    let pixels = unsafe { from_raw_parts_mut(data as *mut u8, length) };
+    let mut i = 0;
+    loop {
+        if i >= length - 1 {
+            break;
+        }
+
+        pixels[i] = pixels[i] / 2;
+        pixels[i + 2] = pixels[i + 2] / 2;
+        i += 4;
+    }
+}
+
+#[unsafe(no_mangle)]
+extern "C" fn blue_filter(data: *mut u8, length: usize) {
+    let pixels = unsafe { from_raw_parts_mut(data as *mut u8, length) };
+    let mut i = 0;
+    loop {
+        if i >= length - 1 {
+            break;
+        }
+
+        pixels[i] = pixels[i] / 2;
+        pixels[i + 1] = pixels[i + 1] / 2;
+        i += 4;
+    }
+}
+
+#[unsafe(no_mangle)]
 extern "C" fn black_white_filter(pointer: *mut u8, length: usize) {
     let pixels = unsafe { from_raw_parts_mut(pointer as *mut u8, length) };
     let mut i = 0;
