@@ -13,22 +13,22 @@ const cores = window.navigator.hardwareConcurrency;
 console.log({ cores });
 
 for (let i = 0; i < cores; i++) {
-  let worker = new Worker("./worker.js");
+  let worker = new Worker("/worker.js");
+
+  worker.addEventListener(
+    "message",
+    (e) => {
+      if (e.data.event == "INITIALIZE") {
+        workers.push(worker);
+      }
+    },
+    false,
+  );
+
+  worker.postMessage({ event: "INITIALIZE", imports });
 }
 
-worker.addEventListener(
-  "message",
-  (e) => {
-    if (e.data.event == "INITIALIZE") {
-      workers.push(worker);
-    }
-  },
-  false,
-);
-
-worker.postMessage({ event: "INITIALIZE", imports });
-
-const interval = setInterval(executeWorkers, 100);
+let interval;
 
 const executeWorkers = () => {
   if (workers.length === cores) {
@@ -39,9 +39,11 @@ const executeWorkers = () => {
     const v = i + 1;
     console.log(`value to sum: ${v}`);
 
-    workers[i].postmessage({
-      event: "execute",
+    workers[i].postMessage({
+      event: "EXECUTE",
       value: v,
     });
   }
 };
+
+interval = setInterval(executeWorkers, 100);
