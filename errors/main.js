@@ -47,6 +47,38 @@ const runtimeError = () => {
   );
 };
 
+const throwingExceptions = () => {
+  const tag = new WebAssembly.Tag({
+    parameters: ["f32"],
+  });
+
+  const exceptionOption = { traceStack: true };
+
+  const config = {
+    env: {
+      throw_exception: () => {
+        console.log("here");
+        const exc = new WebAssembly.Exception(tag, [85.25], exceptionOption);
+        throw exc;
+      },
+    },
+  };
+
+  fetch("exception.wasm")
+    .then((response) => response.arrayBuffer())
+    .then((bytes) => WebAssembly.compile(bytes))
+    .then((mod) => WebAssembly.instantiate(mod, config))
+    .then((mod) => mod.exports.exception())
+    .catch((e) => {
+      console.error(e);
+
+      if (e.is(tag)) {
+        console.log(`getArg 0 : ${e.getArg(tag, 0)}`);
+      }
+    });
+};
+
 // compileError();
 // linkError();
-runtimeError();
+// runtimeError();
+throwingExceptions();
