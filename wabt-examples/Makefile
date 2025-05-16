@@ -28,3 +28,6 @@ decompile:
 wasm2c:
 	wasm2c calculator.wasm -o calculator-c.c
 
+wasm2js:
+	wasm2js calculator.wasm -o calculator.mjs
+
